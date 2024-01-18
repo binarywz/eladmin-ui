@@ -69,7 +69,15 @@ export default {
     }
   },
   methods: {
+    getCode() {
+      this.$request.get('http://localhost:8000/auth/code').then(res => {
+        this.codeUrl = res.data.img
+        this.loginForm.uuid = res.data.uuid
+      })
+    },
+    handleLogin() {
 
+    }
   }
 }
 </script>
