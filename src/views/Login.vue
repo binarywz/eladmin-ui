@@ -43,6 +43,7 @@
 
 <script>
 import Background from '@/assets/images/background.jpg'
+import { encrypt } from '@/utils/rsaEncrypt'
 
 export default {
   name: "Login",
@@ -76,7 +77,10 @@ export default {
       })
     },
     handleLogin() {
-
+      this.loginForm.password = encrypt(this.loginForm.password)
+      this.$request.post('http://localhost:8000/auth/login', this.loginForm).then(res => {
+        this.$router.push('/dashboard')
+      })
     }
   }
 }
