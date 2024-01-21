@@ -77,9 +77,15 @@ export default {
       })
     },
     handleLogin() {
-      this.loginForm.password = encrypt(this.loginForm.password)
-      this.$request.post('http://localhost:8000/auth/login', this.loginForm).then(res => {
-        this.$router.push('/dashboard')
+      this.$refs.loginForm.validate(valid => {
+        if (valid) {
+          this.loginForm.password = encrypt(this.loginForm.password)
+          this.$request.post('http://localhost:8000/auth/login', this.loginForm).then(res => {
+            this.$router.push('/dashboard')
+          })
+        } else {
+          alert('请按要求完善登陆信息！')
+        }
       })
     }
   }
