@@ -3,7 +3,7 @@ import Element from 'element-ui'
 
 let request = axios.create()
 
-//添加响应拦截器
+// 添加响应拦截器
 request.interceptors.response.use(response => {
         return response
     },
