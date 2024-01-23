@@ -44,6 +44,9 @@
 <script>
 import Background from '@/assets/images/background.jpg'
 import { encrypt } from '@/utils/rsaEncrypt'
+import Cookies from 'js-cookie'
+import Config from '@/settings'
+import { setToken } from "@/utils/auth";
 
 export default {
   name: "Login",
@@ -70,8 +73,27 @@ export default {
     }
   },
   methods: {
+    getCookie() {
+      const username = Cookies.get('username')
+      let password = Cookies.get('password')
+      const rememberMe = Cookies.get('rememberMe')
+      // 保存cookie里面的加密后的密码
+      this.cookiePass = password === undefined ? '' : password
+      password = password === undefined ? this.loginForm.password : password
+      this.loginForm = {
+        username: username === undefined ? this.loginForm.username : username,
+        password: password,
+        rememberMe: rememberMe === undefined ? false : Boolean(rememberMe),
+        code: ''
+      }
+    },
+    setRank() {
+      this.$store.dispatch('setRank_A','p8')
+      console.log(this.$store.getters.simpleHandle_A);
+    },
     getCode() {
       this.$request.get('http://localhost:8000/auth/code').then(res => {
+        setToken(res.data.token, this.loginForm.rememberMe)
         this.codeUrl = res.data.img
         this.loginForm.uuid = res.data.uuid
       })
@@ -79,8 +101,27 @@ export default {
     handleLogin() {
       this.$refs.loginForm.validate(valid => {
         if (valid) {
-          this.loginForm.password = encrypt(this.loginForm.password)
-          this.$request.post('http://localhost:8000/auth/login', this.loginForm).then(res => {
+          const user = {
+            username: this.loginForm.username,
+            password: this.loginForm.password,
+            rememberMe: this.loginForm.rememberMe,
+            code: this.loginForm.code,
+            uuid: this.loginForm.uuid
+          }
+          if (user.password !== this.cookiePass) {
+            user.password = encrypt(user.password)
+          }
+          if (user.rememberMe) {
+            Cookies.set('username', user.username, { expires: Config.passCookieExpires })
+            Cookies.set('password', user.password, { expires: Config.passCookieExpires })
+            Cookies.set('rememberMe', user.rememberMe, { expires: Config.passCookieExpires })
+          } else {
+            Cookies.remove('username')
+            Cookies.remove('password')
+            Cookies.remove('rememberMe')
+          }
+          this.$request.post('http://localhost:8000/auth/login', user).then(res => {
+            setToken(res.data.token, this.loginForm.rememberMe)
             this.$router.push('/dashboard')
           })
         } else {
