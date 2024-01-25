@@ -52,6 +52,7 @@ export default {
   name: "Login",
   created() {
     this.getCode()
+    this.getCookie()
   },
   data(){
     return {
@@ -93,7 +94,6 @@ export default {
     },
     getCode() {
       this.$request.get('http://localhost:8000/auth/code').then(res => {
-        setToken(res.data.token, this.loginForm.rememberMe)
         this.codeUrl = res.data.img
         this.loginForm.uuid = res.data.uuid
       })
