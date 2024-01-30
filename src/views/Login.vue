@@ -88,10 +88,6 @@ export default {
         code: ''
       }
     },
-    setRank() {
-      this.$store.dispatch('setRank_A','p8')
-      console.log(this.$store.getters.simpleHandle_A);
-    },
     getCode() {
       this.$request.get('http://localhost:8000/auth/code').then(res => {
         this.codeUrl = res.data.img
@@ -120,9 +116,13 @@ export default {
             Cookies.remove('password')
             Cookies.remove('rememberMe')
           }
+          this.loading = true
           this.$request.post('http://localhost:8000/auth/login', user).then(res => {
             setToken(res.data.token, this.loginForm.rememberMe)
             this.$router.push('/dashboard')
+          }).catch(() => {
+            this.loading = false;
+            this.getCode();
           })
         } else {
           alert('请按要求完善登陆信息！')
