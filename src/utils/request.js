@@ -1,6 +1,7 @@
 import axios from "axios";
 import Element from 'element-ui'
-import {getToken} from "./auth";
+import {getToken} from "@/utils/auth";
+import {logout} from "@/utils/login";
 
 let request = axios.create()
 
@@ -23,7 +24,11 @@ request.interceptors.response.use(response => {
     },
     error => {
         Element.Message.error('请求失败' + error)
-        return Promise.reject(error)
+        let code = error.response.data.status
+        if (code === 401) {
+            logout();
+        }
+        return Promise.reject(error);
     })
 
 export default request
