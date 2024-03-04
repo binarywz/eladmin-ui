@@ -15,8 +15,13 @@ const routes = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/Home')
+  },
+  {
+    path: '/areacreate',
+    name: 'AreaCreate',
+    component: () => import('@/views/AreaCreate')
   }
-]
+];
 
 const router = new VueRouter({
   mode: 'history',
