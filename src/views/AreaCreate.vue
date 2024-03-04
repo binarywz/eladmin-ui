@@ -2,8 +2,8 @@
   <div>
     <div id="map" class="map-main"></div>
     <div class="search-box">
-      <el-input placeholder="定位搜索" class="input-with-select">
-        <el-button slot="append" icon="el-icon-search"></el-button>
+      <el-input v-model="searchAddrInput" placeholder="定位搜索" class="input-with-select">
+        <el-button slot="append" icon="el-icon-search" @click="searchAddr"></el-button>
       </el-input>
     </div>
     <div class="map-tool">
@@ -36,7 +36,10 @@ export default {
       // 绘制对象
       drawRegion: null,
       // 图形图层组
-      drawLayerGroup: null
+      drawLayerGroup: null,
+
+      searchAddrInput: '',
+      centerLonAndLat: ''
     }
   },
   methods: {
@@ -77,7 +80,7 @@ export default {
       // 矢量图+注记
       // let mapTypes = ['vec_c', 'cva_c'];
       // 影像图+注记
-      let mapTypes = ['img_c'];
+      let mapTypes = ['img_c', 'cia_c'];
       // 天地图 token
       let tdtToken = 'ed8dea2ce0960c457a106119e8d29ef0';
       let layers = [];
@@ -118,7 +121,24 @@ export default {
       }).addTo(this.map); // 要添加到 L.map 对象中
       // 添加绘制完监听事件
       this.map.on(L.Draw.Event.CREATED, this.drawCreatedBack);
-    }
+    },
+    searchAddr() {
+      fetch('https://restapi.amap.com/v3/config/district?key=6781cb23812440b829b6adb0a454045c&keywords=' + this.searchAddrInput, {
+        method: 'get'
+      }).then(res => {
+        return res.json();
+      }).then(res => {
+        let district = res.districts[0];
+        this.centerLonAndLat = district.center;
+        let lonAndLat = this.centerLonAndLat.split(',');
+        let lat = lonAndLat[1];
+        let lon = lonAndLat[0];
+        this.map.setView([lat, lon], 10);
+        this.searchAddrInput = '';
+      }).catch(err => {
+        console.log("请求高德地图出错, ", err);
+      });
+    },
   },
   mounted() {
     // 初始化地图
