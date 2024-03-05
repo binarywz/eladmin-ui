@@ -17,9 +17,14 @@ const routes = [
     component: () => import('@/views/Home')
   },
   {
-    path: '/areacreate',
-    name: 'AreaCreate',
-    component: () => import('@/views/AreaCreate')
+    path: '/chunkcreate',
+    name: 'ChunkCreate',
+    component: () => import('@/views/ChunkCreate')
+  },
+  {
+    path: '/chunkmetric',
+    name: 'ChunkMetric',
+    component: () => import('@/views/ChunkMetric')
   }
 ];
 

@@ -1,11 +1,30 @@
 <template>
   <div>
     <div id="map" class="map-main"></div>
+    <!-- 搜索框 -->
     <div class="search-box">
       <el-input v-model="searchAddrInput" placeholder="定位搜索" class="input-with-select">
         <el-button slot="append" icon="el-icon-search" @click="searchAddr"></el-button>
       </el-input>
     </div>
+
+    <!-- 添加地块框 -->
+    <el-form ref="chunkForm" :model="chunkForm" label-width="100px" class="add-box">
+      <el-form-item size="mini">
+      </el-form-item>
+      <el-form-item label="地块名称">
+        <el-input v-model="chunkForm.name" style="width: 200px" placeholder="请输入地块名"></el-input>
+      </el-form-item>
+      <el-form-item label="地块坐标">
+        <el-input v-model="chunkForm.center" style="width: 200px" placeholder="绘制地图获取" :disabled="true"></el-input>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" size="small" @click="createChunk">创建</el-button>
+        <el-button size="small" @click="clearChunkForm">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!-- 地图工具 -->
     <div class="map-tool">
       <el-row>
         <el-button class="btn-edit-mark" icon="el-icon-edit" plain circle @click="startDraw"></el-button>
@@ -26,7 +45,7 @@ require('leaflet/dist/leaflet.css');
 require('leaflet-draw/dist/leaflet.draw.css');
 
 export default {
-  name: "AreaCreate",
+  name: "ChunkCreate",
   data() {
     return {
       // L.map 对象
@@ -38,8 +57,15 @@ export default {
       // 图形图层组
       drawLayerGroup: null,
 
-      searchAddrInput: '',
-      centerLonAndLat: ''
+      searchAddrInput: null,
+      centerLonAndLat: null,
+
+      chunkForm: {
+        name: '',
+        center: '',
+        borderCoord: null,
+        source: "ADD"
+      }
     }
   },
   methods: {
@@ -53,7 +79,7 @@ export default {
       // 启动
       this.drawRegion.enable();
     },
-    //清除绘制
+    // 清除绘制
     clearDraw() {
       // 删除全部绘制的图层
       if (this.drawLayerGroup) {
@@ -75,8 +101,8 @@ export default {
         maxBounds: L.latLngBounds(L.latLng(-180, -180), L.latLng(180, 180)),
       });
 
-      // 设置范围(这里是武汉)
-      this.map.setView([30.59, 114.32], 10);
+      // 设置范围
+      this.map.setView([36.807011, 118.017877], 10);
       // 矢量图+注记
       // let mapTypes = ['vec_c', 'cva_c'];
       // 影像图+注记
@@ -100,11 +126,19 @@ export default {
       console.log('绘制完成', e);
       // 绘制的图形图层对象
       let drawLayer = e.layer;
-      let coord = drawLayer.getLatLngs()[0];
-      console.log("边界经纬度坐标列表", coord);
+      let borderList = drawLayer.getLatLngs()[0];
+      let borderCoord = [];
+      let cLat = 0.0, cLon = 0.0;
+      for (let i = 0; i < borderList.length; i++) {
+        cLat += borderList[i].lat;
+        cLon += borderList[i].lng;
+        borderCoord.push([borderList[i].lat, borderList[i].lng]);
+      }
+      this.chunkForm.borderCoord = borderCoord;
+      this.chunkForm.center = cLon / borderList.length + "," + cLat / borderList.length;
       // 判断当前没有图层组，需先添加
       if (!this.drawLayerGroup) {
-        //图层组
+        // 图层组
         this.drawLayerGroup = new L.FeatureGroup();
         // 添加
         this.map.addLayer(this.drawLayerGroup);
@@ -114,15 +148,15 @@ export default {
     },
     // 初始化绘制控件
     initDrawCtrl() {
-      //初始化绘制控件
+      // 初始化绘制控件
       this.drawControl = new L.Control.Draw({
-        // position: 'topright',//控件位置 'topleft'(默认), 'topright', 'bottomleft' or 'bottomright'
         draw: false
       }).addTo(this.map); // 要添加到 L.map 对象中
       // 添加绘制完监听事件
       this.map.on(L.Draw.Event.CREATED, this.drawCreatedBack);
     },
     searchAddr() {
+      // 使用fetch处理跨域
       fetch('https://restapi.amap.com/v3/config/district?key=6781cb23812440b829b6adb0a454045c&keywords=' + this.searchAddrInput, {
         method: 'get'
       }).then(res => {
@@ -138,6 +172,18 @@ export default {
       }).catch(err => {
         console.log("请求高德地图出错, ", err);
       });
+    },
+    createChunk() {
+      this.$request.post('http://localhost:8000/rsensing/landchunk/add', this.chunkForm).then(res => {
+        console.log("createChunk success...")
+      }).catch((err) => {
+        console.log("createChunk failed, ", err)
+      });
+    },
+    clearChunkForm() {
+      this.clearDraw();
+      this.chunkForm = null;
+      this.borderCoord = null;
     },
   },
   mounted() {
@@ -162,25 +208,25 @@ export default {
 
 .search-box {
   z-index: 2000;
-  position: relative;
+  position: absolute;
   top: 20px;
   left: 8px;
   width: 189px;
   height: 30px;
   opacity: 1;
-  border-radius: 5px;
+  border-radius: 3px;
   background: rgba(232, 232, 232, 1);
 }
 
 .map-tool {
   z-index: 2000;
-  position: relative;
-  top: 72px;
-  left: 8px;
+  position: absolute;
+  top: 100px;
+  left: 20px;
   width: 63px;
   height: 150px;
   opacity: 1;
-  border-radius: 8px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 1);
   backdrop-filter: blur(7px);
 
@@ -191,6 +237,19 @@ export default {
   .btn-edit-del {
     margin-top: 20px;
   }
+}
+
+.add-box {
+  z-index: 2000;
+  position: relative;
+  top: 20px;
+  left: 1437px;
+  width: 350px;
+  height: 200px;
+  opacity: 1;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0px 2px 4px  rgba(0, 0, 0, 0.02);
 }
 
 </style>
