@@ -12,6 +12,16 @@
     <el-form ref="chunkForm" :model="chunkForm" label-width="100px" class="add-box">
       <el-form-item size="mini">
       </el-form-item>
+      <el-form-item label="选择地区">
+        <el-select v-model="selectRegionId" placeholder="请选择" style="width: 200px">
+          <el-option
+              v-for="item in regionList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id">
+          </el-option>
+        </el-select>
+      </el-form-item>
       <el-form-item label="地块名称">
         <el-input v-model="chunkForm.name" style="width: 200px" placeholder="请输入地块名"></el-input>
       </el-form-item>
@@ -64,8 +74,11 @@ export default {
         name: '',
         center: '',
         borderCoord: null,
-        source: "ADD"
-      }
+        source: "ADD",
+        regionId: null
+      },
+      regionList: [],
+      selectRegionId: null
     }
   },
   methods: {
@@ -125,9 +138,7 @@ export default {
     drawCreatedBack(e) {
       console.log('绘制完成', e);
       // 绘制的图形图层对象
-      let drawLayer = e.layer;
-      let borderList = drawLayer.getLatLngs()[0];
-      let borderCoord = [];
+      let drawLayer = e.layer, borderList = drawLayer.getLatLngs()[0], borderCoord = [];
       let cLat = 0.0, cLon = 0.0;
       for (let i = 0; i < borderList.length; i++) {
         cLat += borderList[i].lat;
@@ -136,6 +147,7 @@ export default {
       }
       this.chunkForm.borderCoord = borderCoord;
       this.chunkForm.center = cLon / borderList.length + "," + cLat / borderList.length;
+      this.chunkForm.regionId = this.selectRegionId;
       // 判断当前没有图层组，需先添加
       if (!this.drawLayerGroup) {
         // 图层组
@@ -185,8 +197,21 @@ export default {
       this.chunkForm = null;
       this.borderCoord = null;
     },
+    getRegionList() {
+      this.$request.post('http://localhost:8000/rsensing/region/list', {}).then(res => {
+        if (res.data !== undefined) {
+          this.regionList = res.data;
+        } else {
+          console.log("region list empty,");
+        }
+      }).catch((err) => {
+        console.log("createChunk failed, ", err);
+      });
+    }
   },
   mounted() {
+    // 获取地区列表
+    this.getRegionList();
     // 初始化地图
     this.initMap();
     // 初始化绘制控件
@@ -245,7 +270,7 @@ export default {
   top: 20px;
   left: 1437px;
   width: 350px;
-  height: 200px;
+  height: 270px;
   opacity: 1;
   border-radius: 3px;
   background: rgba(255, 255, 255, 1);

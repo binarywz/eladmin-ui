@@ -1,6 +1,20 @@
 <template>
   <div>
+    <!-- 天地图 -->
     <div id="map" class="map-main"></div>
+
+    <!-- 添加地块框 -->
+    <div class="region-chunk-box">
+      <div class="chunk-bok-title">地区列表</div>
+      <el-tree
+          :data="regionList"
+          node-key="id"
+          :props="regionChunkProps"
+          :default-expanded-keys=[1]
+          class="region-chunk-tree"
+          @node-click="handleChunkNodeClick">
+      </el-tree>
+    </div>
   </div>
 </template>
 
@@ -18,7 +32,12 @@ export default {
       // 地块id
       chunkId: 2,
       chunkCenter: null,
-      borderCoord: null
+      borderCoord: null,
+      regionList: [],
+      regionChunkProps: {
+        children: 'landChunkList',
+        label: 'name'
+      }
     }
   },
   methods: {
@@ -36,15 +55,13 @@ export default {
       });
 
       this.getLandChunkById();
-      // 矢量图+注记
-      // let mapTypes = ['vec_c', 'cva_c'];
       // 影像图+注记
       let mapTypes = ['img_c', 'cia_c'];
       // 天地图 token
       let tdtToken = 'ed8dea2ce0960c457a106119e8d29ef0';
       let layers = [];
       for (let i = 0, len = mapTypes.length; i < len; i++) {
-        let tdtUrl = `http://t0.tianditu.gov.cn/DataServer?T=${mapTypes[i]}&x={x}&y={y}&l={z}&tk=${tdtToken}`;
+        let tdtUrl = `https://t0.tianditu.gov.cn/DataServer?T=${mapTypes[i]}&x={x}&y={y}&l={z}&tk=${tdtToken}`;
         let layer = L.tileLayer(tdtUrl, {
           zoomOffset: 1,
           noWrap: true,
@@ -61,21 +78,53 @@ export default {
           id: this.chunkId
         }
       }).then(res => {
-        this.chunkCenter = res.data.center;
-        this.borderCoord = res.data.borderCoord;
-        if (this.chunkCenter !== undefined) {
-          let lonAndLat = this.chunkCenter.split(',');
-          this.map.setView([lonAndLat[1], lonAndLat[0]], 10);
-        } else  {
-          this.map.setView([36.807011, 118.017877], 10);
-        }
-        if (this.borderCoord !== undefined) {
-          L.polygon(JSON.parse(this.borderCoord), {color: 'red'}).addTo(this.map);
-        }
+        this.setMapView(res.data.center, res.data.borderCoord);
       })
+    },
+    getRegionAndChunk() {
+      this.$request.post('http://localhost:8000/rsensing/region/getRegionAndChunk', {}).then(res => {
+        if (res.data !== undefined) {
+          this.regionList = res.data;
+          console.log("regionList: ", this.regionList);
+        } else {
+          console.log("region list empty,");
+        }
+      }).catch((err) => {
+        console.log("createChunk failed, ", err);
+      });
+    },
+    handleChunkNodeClick(node) {
+      // 非叶子节点不触发切换视图
+      if (node.landChunkList !== undefined) {
+        return;
+      }
+      this.clearBorderList();
+      this.setMapView(node.center, node.borderCoord);
+    },
+    setMapView(center, borderCoord) {
+      this.chunkCenter = center;
+      this.borderCoord = borderCoord;
+      if (this.chunkCenter !== undefined) {
+        let lonAndLat = this.chunkCenter.split(',');
+        this.map.setView([lonAndLat[1], lonAndLat[0]], 15);
+      } else  {
+        this.map.setView([36.807011, 118.017877], 15);
+      }
+      if (this.borderCoord !== undefined) {
+        L.polygon(JSON.parse(this.borderCoord), {color: 'red'}).addTo(this.map);
+      }
+    },
+    clearBorderList() {
+      this.map.eachLayer(function (layer) {
+        if (layer._path != null) {
+          layer.remove();
+        }
+      });
     },
   },
   mounted() {
+    // 获取区域
+    this.getRegionAndChunk();
     // 初始化地图
     this.initMap();
   }
@@ -93,36 +142,41 @@ export default {
   background: #CCC;
 }
 
-.search-box {
+.region-chunk-box {
   z-index: 2000;
   position: relative;
   top: 20px;
-  left: 8px;
-  width: 189px;
-  height: 30px;
-  opacity: 1;
-  border-radius: 5px;
-  background: rgba(232, 232, 232, 1);
-}
+  left: 20px;
+  width: 200px;
+  height: 270px;
+  border-radius: 3px;
 
-.map-tool {
-  z-index: 2000;
-  position: relative;
-  top: 72px;
-  left: 8px;
-  width: 63px;
-  height: 150px;
-  opacity: 1;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 1);
-  backdrop-filter: blur(7px);
-
-  .btn-edit-mark {
-    margin-top: 20px;
+  .chunk-bok-title {
+    height: 30px;
+    line-height: 30px;
+    background-color: #333;
+    font-size: 18px;
+    color: #ffffff;
   }
 
-  .btn-edit-del {
-    margin-top: 20px;
+  .region-chunk-tree {
+    padding-top: 10px;
+    height: 270px;
+    background: rgba(16, 17, 17, .69);
+
+    .el-tree-node__label {
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .el-tree-node:focus > .el-tree-node__content {
+      background-color: #66b1ff87 !important;
+    }
+
+    .el-tree-node__content:hover {
+      background-color: #66b1ff87;
+    }
+
   }
 }
 
